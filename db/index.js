@@ -220,30 +220,27 @@ async function closeReport(reportId, password) {
  * report to CURRENT_TIMESTAMP + interval '1 day'
  */
 async function createReportComment(reportId, commentFields = {}) {
-
   const setString = Object.keys(fields)
     .map((key, index) => `"${key}"=$${index + 1}`)
     .join(', ')
 
-    if (setString.length === 0) {
-      return
-    }
+  if (setString.length === 0) {
+    return
+  }
 
   // read off the content from the commentFields
   try {
-    const allReports = await getOpenReports(reportId);
-    console.log(allReports);
-    if(!allReports.expirationDate){
+    const allReports = await getOpenReports(reportId)
+    console.log(allReports)
+    if (!allReports.expirationDate) {
       throw {
         name: 'expired',
-        message:'Report already expired'
+        message: 'Report already expired',
       }
-      if(allReports){
-        
+      if (allReports) {
       }
     }
-    
-    
+
     // grab the report we are going to be commenting on
     // if it wasn't found, throw an error saying so
     // if it is not open, throw an error saying so
