@@ -1,7 +1,9 @@
 // Require the Client constructor from the pg package
 const { Client } = require('pg')
+const CONNECTION_STRING =
+  process.env.DATABASE_URL || 'postgres://localhost:5432/phenomena-dev'
 
-const client = new Client('postgres://localhost:5432/phenomena-dev')
+const client = new Client(CONNECTION_STRING)
 
 // Create a constant, CONNECTION_STRING, from either process.env.DATABASE_URL or postgres://localhost:5432/phenomena-dev
 
@@ -46,20 +48,21 @@ async function getOpenReports() {
       .join(', ')});
     `)
     console.log('banamwd')
-    reports.map((report) => {
-      report.comments = []
-      comments.map((comment) => {
-        if (comment.reportId === report.id) {
-          report.comments.push(comment)
-        }
+    console.log('comments are', comments)
+    const AllReports = reports.map((report) => {
+      const reportComments = comments.map((comment) => {
+        return comment.reportId === report.id
       })
-      if (Date.parse(report.expirationDate) < new Date()) {
-        report.isExpiration = true
-      }
-      delete reports.password
-    })
+      report.comments = reportComments
 
-    return reports
+      if (Date.parse(report.expirationDate) < new Date()) {
+        report.isExpired = true
+      }
+
+      delete report.password
+      return report
+    })
+    return AllReports
 
     // first load all of the reports which are open
     // then load the comments only for those reports, using a
@@ -102,6 +105,7 @@ async function createReport({ title, location, description, password }) {
     )
 
     delete report.password
+    console.log('reports are ', _getReport())
 
     return report
     // insert the correct fields into the reports table
@@ -135,10 +139,12 @@ async function _getReport(reportId) {
       `
     SELECT * 
     FROM reports 
-    WHERE id=$1;`,
+    WHERE id=$1;
+    `,
       [reportId],
     )
-    return rows
+    console.log('report is', report)
+    return report
     // SELECT the report with id equal to reportId
     // return the report
   } catch (error) {
@@ -156,24 +162,32 @@ async function _getReport(reportId) {
  * If nothing is updated this way, throw an error
  */
 async function closeReport(reportId, password) {
+  console.log(123344)
   try {
+    console.log('hioooo')
     const report = await _getReport(reportId)
-    if (!report) {
+    console.log(report)
+    if (report === undefined) {
       throw 'No report found matching this ID'
     }
+    console.log('hello')
     if (report.password !== password) {
       throw {
         name: 'PasswordsDontMatch',
-        message: 'Wrong Password',
+        message: 'Wrong Password was entered',
       }
     }
+
+    console.log('bye')
 
     if (!report.isOpen) {
       throw {
         name: 'AlreadyClosed',
-        message: 'Report is already closed',
+        message: 'Report is already closed!',
       }
     }
+
+    console.log('keperfrfe')
 
     if (report && report.password === password) {
       report.isOpen = false
@@ -206,43 +220,30 @@ async function closeReport(reportId, password) {
  * report to CURRENT_TIMESTAMP + interval '1 day'
  */
 async function createReportComment(reportId, commentFields = {}) {
-  // read off the content from the commentFields
-  const setString = Object.keys(commentFields)
+
+  const setString = Object.keys(fields)
     .map((key, index) => `"${key}"=$${index + 1}`)
     .join(', ')
 
+    if (setString.length === 0) {
+      return
+    }
+
+  // read off the content from the commentFields
   try {
-    const {
-      rows: [report],
-    } = await client.query(
-      `
-    SELECT * 
-    FROM reports
-    WHERE id=$1;
-    `,
-      [reportId],
-    )
-    if (!reportId) {
-      throw 'No report found for commenting'
+    const allReports = await getOpenReports(reportId);
+    console.log(allReports);
+    if(!allReports.expirationDate){
+      throw {
+        name: 'expired',
+        message:'Report already expired'
+      }
+      if(allReports){
+        
+      }
     }
-
-    if (!report.isOpen) {
-      throw 'Report is not open'
-    }
-
-    if (Date.parse(report.expirationDate) < new Date()) {
-      await client.query(
-        `
-      UPDATE reports 
-      SET ${setSttring}
-      WHERE id=${reportId}
-      RETURNING *;
-
-      `,
-        Object.values(commentFields),
-      )
-    }
-
+    
+    
     // grab the report we are going to be commenting on
     // if it wasn't found, throw an error saying so
     // if it is not open, throw an error saying so
