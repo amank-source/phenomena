@@ -1,5 +1,6 @@
 // Require the Client constructor from the pg package
 const { Client } = require('pg')
+const { report } = require('../api')
 const CONNECTION_STRING =
   process.env.DATABASE_URL || 'postgres://localhost:5432/phenomena-dev'
 
@@ -48,21 +49,18 @@ async function getOpenReports() {
       .join(', ')});
     `)
     console.log('banamwd')
+    console.log(comments)
+
     console.log('comments are', comments)
-    const AllReports = reports.map((report) => {
-      const reportComments = comments.map((comment) => {
-        return comment.reportId === report.id
-      })
-      report.comments = reportComments
 
-      if (Date.parse(report.expirationDate) < new Date()) {
-        report.isExpired = true
-      }
-
+    reports.forEach((report) => {
+      report.comments = comments.filter(
+        (comment) => comment.reportId === report.id,
+      )
+      report.isExpired = Date.parse(report.expirationDate) < new Date()
       delete report.password
-      return report
     })
-    return AllReports
+    return reports
 
     // first load all of the reports which are open
     // then load the comments only for those reports, using a
@@ -105,8 +103,7 @@ async function createReport({ title, location, description, password }) {
     )
 
     delete report.password
-    console.log('reports are ', _getReport())
-
+    console.log(report)
     return report
     // insert the correct fields into the reports table
     // remember to return the new row from the query
@@ -132,6 +129,7 @@ async function createReport({ title, location, description, password }) {
  * functions.
  */
 async function _getReport(reportId) {
+  console.log(123345567788)
   try {
     const {
       rows: [report],
@@ -143,7 +141,7 @@ async function _getReport(reportId) {
     `,
       [reportId],
     )
-    console.log('report is', report)
+    console.log('report is 12345', report)
     return report
     // SELECT the report with id equal to reportId
     // return the report
@@ -219,33 +217,38 @@ async function closeReport(reportId, password) {
  * reportId, and update the expirationDate of the original
  * report to CURRENT_TIMESTAMP + interval '1 day'
  */
-async function createReportComment(reportId, commentFields = {}) {
-  const setString = Object.keys(fields)
-    .map((key, index) => `"${key}"=$${index + 1}`)
-    .join(', ')
-
-  if (setString.length === 0) {
-    return
-  }
-
+async function createReportComment(reportId, content) {
   // read off the content from the commentFields
+  
   try {
-    const allReports = await getOpenReports(reportId)
-    console.log(allReports)
-    if (!allReports.expirationDate) {
+    const report = await _getReport(reportId)
+    console.log(report)
+
+    // grab the report we are going to be commenting on
+    if (!report) {
       throw {
-        name: 'expired',
-        message: 'Report already expired',
-      }
-      if (allReports) {
+        name: 'ReportNotFound',
+        message: 'The report is not found',
       }
     }
 
-    // grab the report we are going to be commenting on
     // if it wasn't found, throw an error saying so
+    if (!report.isOpen) {
+      throw {
+        name: 'ReportAlreadyClosed',
+        message: 'Report is already closed',
+      }
+    }
     // if it is not open, throw an error saying so
+    if (Date.parse(report.expirationDate) < new Date()) {
+      throw {
+        name: 'ReportExpired',
+        message: 'Report is already Expired cant comment',
+      }
+    }
     // if the current date is past the expiration, throw an error saying so
     // you can use Date.parse(report.expirationDate) < new Date() to check
+
     // all go: insert a comment
     // then update the expiration date to a day from now
     // finally, return the comment
@@ -255,6 +258,7 @@ async function createReportComment(reportId, commentFields = {}) {
 }
 
 // export the client and all database functions below
+
 module.exports = {
   client,
   createReport,

@@ -18,7 +18,7 @@ apiRouter.get('/reports', async (req, res) => {
       reports,
     })
   } catch (error) {
-    console.error(error)
+    next(error)
   }
 })
 
@@ -30,6 +30,21 @@ apiRouter.get('/reports', async (req, res) => {
  * - on success, it should send back an object like { reports: theReports }
  * - on caught error, call next(error)
  */
+
+apiRouter.post('/reports', async (req, res) => {
+  console.log(req.body)
+  if (!req.body) {
+    return res.sendStatus(404)
+  }
+  try {
+    const report = await createReport()
+    res.send({
+      report,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
 
 /**
  * Set up a POST request for /reports
