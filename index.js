@@ -13,6 +13,8 @@ const morgan = require('morgan')
 
 server.use(morgan('dev'))
 
+server.use(bodyParser.json())
+
 // Create a constant variable, PORT, based on what's in process.env.PORT or fallback to 3000
 
 // Import express, and create a server

@@ -162,24 +162,22 @@ async function _getReport(reportId) {
  */
 async function closeReport(reportId, password) {
   console.log(123344)
+  console.log('closing report')
   try {
     console.log('hioooo')
     const report = await _getReport(reportId)
     console.log(report)
-    if (report === undefined) {
+    if (!report) {
       throw 'No report found matching this ID'
     }
     console.log('hello')
     if (report.password !== password) {
-      throw {
-        name: 'PasswordsDontMatch',
-        message: 'Wrong Password was entered',
-      }
+      throw Error('password doesnt match')
     }
 
     console.log('bye')
 
-    if (!report.isOpen) {
+    if (report.isOpen === false) {
       throw {
         name: 'AlreadyClosed',
         message: 'Report is already closed!',
@@ -189,10 +187,11 @@ async function closeReport(reportId, password) {
     console.log('keperfrfe')
 
     if (report && report.password === password) {
-      report.isOpen = false
-      throw {
-        name: 'Closed',
-        message: 'Report now closed',
+      console.log('deleting the post')
+      try {
+        report.isOpen = false
+      } catch (error) {
+        throw Error('password matched')
       }
     }
 
@@ -223,7 +222,7 @@ async function createReportComment(reportId, content) {
 
   try {
     const report = await _getReport(reportId)
-    console.log(report)
+    console.log('id for comment is ', reportId)
 
     // grab the report we are going to be commenting on
     if (!report) {
@@ -250,14 +249,14 @@ async function createReportComment(reportId, content) {
     // if the current date is past the expiration, throw an error saying so
     // you can use Date.parse(report.expirationDate) < new Date() to check
     const {
-      rows: [comments],
+      rows: [comment],
     } = await client.query(
       `
-    INSERT INTO comments(content)
-    VALUES ($1)
+    INSERT INTO comments(content,"reportId")
+    VALUES ($1, $2)
     RETURNING *;
     `,
-      [content],
+      [content, reportId],
     )
 
     await client.query(
@@ -268,10 +267,12 @@ async function createReportComment(reportId, content) {
 `,
       [reportId],
     )
+
+    report.comments = comment
     // all go: insert a comment
     // then update the expiration date to a day from now
     // finally, return the comment
-    return report
+    return comment
   } catch (error) {
     throw error
   }

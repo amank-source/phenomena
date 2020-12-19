@@ -34,11 +34,12 @@ apiRouter.get('/reports', async (req, res, next) => {
 
 apiRouter.post('/reports', async (req, res, next) => {
   console.log(req.body)
+  console.log('hitting route for creating post')
   if (!req.body) {
     return res.sendStatus(404)
   }
   try {
-    const report = await createReport()
+    const report = await createReport(req.body)
     res.setHeader('content-type', 'application/json')
     res.send({
       report,
@@ -66,10 +67,29 @@ apiRouter.post('/reports', async (req, res, next) => {
  * - on success, it should send back the object returned by closeReport
  * - on caught error, call next(error)
  */
-apiRouter.delete('/:id', async (req, res, next) => {
-  const report = await _getReport(req.params.reportId)
-  console.log('report is new new', report)
-  console.log('report id is ', req.params.reportId)
+apiRouter.delete('/reports/:reportId', async (req, res, next) => {
+  console.log('hitting dleet route')
+  try {
+    const report = await closeReport(req.params.reportId, req.body.password)
+
+    res.send({
+      report,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+apiRouter.post('/reports/:reportId/comments', async (req, res, next) => {
+  console.log('creating comment through server')
+  try {
+    const comment = await createReportComment(req.params.reportId, req.body)
+    res.send({
+      comment,
+    })
+  } catch (error) {
+    next(error)
+  }
 })
 /**
  * Set up a POST request for /reports/:reportId/comments
@@ -80,17 +100,6 @@ apiRouter.delete('/:id', async (req, res, next) => {
  * - on success, it should send back the object returned by createReportComment
  * - on caught error, call next(error)
  */
-
-// apiRouter.post('/reports/:reportId/comments', async (req, res, next) => {
-//   if (!req.body) {
-//     return res.sendStatus(404)
-//   }
-
-//   try {
-//   } catch (error) {
-//     next(error)
-//   }
-// })
 
 // Export the apiRouter
 module.exports = apiRouter
