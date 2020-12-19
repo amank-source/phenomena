@@ -131,9 +131,10 @@ async function createReport({ title, location, description, password }) {
 async function _getReport(reportId) {
   console.log(123345567788)
   try {
+    console.log('this is id', reportId)
     const {
       rows: [report],
-    } = client.query(
+    } = await client.query(
       `
     SELECT * 
     FROM reports 
@@ -219,7 +220,7 @@ async function closeReport(reportId, password) {
  */
 async function createReportComment(reportId, content) {
   // read off the content from the commentFields
-  
+
   try {
     const report = await _getReport(reportId)
     console.log(report)
@@ -248,10 +249,29 @@ async function createReportComment(reportId, content) {
     }
     // if the current date is past the expiration, throw an error saying so
     // you can use Date.parse(report.expirationDate) < new Date() to check
+    const {
+      rows: [comments],
+    } = await client.query(
+      `
+    INSERT INTO comments(content)
+    VALUES ($1)
+    RETURNING *;
+    `,
+      [content],
+    )
 
+    await client.query(
+      `
+ UPDATE reports
+ SET "expirationDate"= CURRENT_TIMESTAMP + interval '1 day'
+ WHERE id=$1;
+`,
+      [reportId],
+    )
     // all go: insert a comment
     // then update the expiration date to a day from now
     // finally, return the comment
+    return report
   } catch (error) {
     throw error
   }
