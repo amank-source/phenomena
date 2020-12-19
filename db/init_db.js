@@ -4,9 +4,7 @@ const {
   testDB
 } = require('./seed_data');
 
-/**
- * Do not change this code!
- */
+
 client.connect()
   .then(rebuildDB)
   .then(testDB)
