@@ -38,20 +38,16 @@ apiRouter.post('/reports', async (req, res, next) => {
 })
 
 apiRouter.delete('/reports/:reportId', async (req, res, next) => {
-  console.log('hitting dleet route')
   try {
     const report = await closeReport(req.params.reportId, req.body.password)
 
-    res.send({
-      report,
-    })
+    res.send({ message: 'Report successfully closed!' })
   } catch (error) {
     next(error)
   }
 })
 
 apiRouter.post('/reports/:reportId/comments', async (req, res, next) => {
-  console.log('creating comment through server')
   try {
     const comment = await createReportComment(req.params.reportId, req.body)
     res.send({

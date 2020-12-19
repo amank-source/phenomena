@@ -90,70 +90,72 @@ async function closeReport(reportId, password) {
     const report = await _getReport(reportId)
 
     if (!report) {
-      throw 'No report found matching this ID'
+      throw Error('Report does not exist with that id')
     }
 
     if (report.password !== password) {
-      throw Error('password doesnt match')
+      console.log('report.password:', report.password)
+      console.log('password:', password)
+      throw Error('Password incorrect for this report, please try again')
     }
 
-    if (report.isOpen === false) {
-      throw Error('Report Already closed!')
+    if (!report.isOpen) {
+      throw Error('This report has already been closed')
     }
 
-    if (report && report.password === password) {
-      try {
-        report.isOpen = false
-      } catch (error) {
-        throw Error('password matched')
-      }
-    }
+    await client.query(
+      `
+      UPDATE reports
+      SET "isOpen"='false'
+      WHERE id=$1;
+      `,
+      [reportId],
+    )
+    return { message: 'Report successfully closed!' }
   } catch (error) {
     throw error
   }
 }
 
-async function createReportComment(reportId, content) {
+async function createReportComment(reportId, commentFields) {
+  console.log('the comment fields are:', commentFields)
+
   try {
-    const report = await _getReport(reportId)
-    console.log('id for comment is ', reportId)
+    const activeReport = await _getReport(reportId)
 
-    if (!report) {
-      throw {
-        name: 'ReportNotFound',
-        message: 'The report is not found',
-      }
+    if (!activeReport) {
+      throw Error('That report does not exist, no comment has been made')
     }
 
-    if (!report.isOpen) {
-      throw Error('Report is not open!')
+    if (!activeReport.isOpen) {
+      throw Error('That report has been closed, no comment has been made')
     }
 
-    if (Date.parse(report.expirationDate) < new Date()) {
-      throw Error('Report Already Expired')
+    if (Date.parse(activeReport.expirationDate) < new Date()) {
+      throw Error(
+        'The discussion time on this report has expired, no comment has been made',
+      )
     }
 
     const {
       rows: [comment],
     } = await client.query(
       `
-    INSERT INTO comments(content,"reportId")
-    VALUES ($1, $2)
-    RETURNING *;
-    `,
-      [content, reportId],
+      INSERT INTO comments("reportId", content)
+      VALUES ($1, $2)
+      RETURNING *;`,
+      [reportId, commentFields.content],
     )
 
     await client.query(
       `
- UPDATE reports
- SET "expirationDate"= CURRENT_TIMESTAMP + interval '1 day'
- WHERE id=$1;
-`,
+      UPDATE reports
+      SET "expirationDate" = CURRENT_TIMESTAMP + interval '1 day'
+      WHERE id = $1
+      RETURNING *;
+      `,
       [reportId],
     )
-
-    report.comments = comment
 
     return comment
   } catch (error) {
