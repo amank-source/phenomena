@@ -102,6 +102,7 @@ async function closeReport(reportId, password) {
     if (!report.isOpen) {
       throw Error('This report has already been closed')
     }
+    console.log('id for delete ', reportId)
 
     await client.query(
       `

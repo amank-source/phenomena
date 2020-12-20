@@ -40,8 +40,9 @@ apiRouter.post('/reports', async (req, res, next) => {
 apiRouter.delete('/reports/:reportId', async (req, res, next) => {
   try {
     const report = await closeReport(req.params.reportId, req.body.password)
+    console.log('delete report is', report)
 
-    res.send({ message: 'Report successfully closed!' })
+    res.send(report)
   } catch (error) {
     next(error)
   }
