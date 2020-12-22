@@ -103,15 +103,20 @@ async function closeReport(reportId, password) {
       throw Error('This report has already been closed')
     }
     console.log('id for delete ', reportId)
-
-    await client.query(
-      `
+    if (report && report.password === password) {
+      try {
+        await client.query(
+          `
       UPDATE reports
       SET "isOpen"='false'
       WHERE id=$1;
       `,
-      [reportId],
-    )
+          [reportId],
+        )
+      } catch (error) {
+        throw Error('password doesnt match')
+      }
+    }
     return { message: 'Report successfully closed!' }
   } catch (error) {
     throw error
